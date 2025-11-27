@@ -221,11 +221,14 @@ Future<String?> uploadImage() async {
 ```
 
 ## 🌐 Network Endpoints
+The following is a list of known public aggregators on Walrus Mainnet; they are checked periodically, but each of them may still be temporarily unavailable:
 
 | Network | Publisher | Aggregator |
 |---------|-----------|------------|
 | **Testnet** | `https://publisher.walrus-testnet.walrus.space` | `https://aggregator.walrus-testnet.walrus.space` |
-| **Mainnet** | `https://publisher.walrus.site` | `https://aggregator.walrus.site` |
+| **Mainnet** | (Auth required - No public publisher) | `https://walrus-mainnet-aggregator.nami.cloud` |
+
+> **Note:** On Mainnet, there are no public publishers without authentication, as they consume both SUI and WAL tokens. You need to run your own publisher node or use an authenticated service.
 
 ## 🛡️ Error Handling
 
