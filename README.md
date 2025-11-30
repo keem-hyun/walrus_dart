@@ -1,22 +1,21 @@
-# Walrus Dart SDK
+# Walrus Flutter SDK
 
 [![Pub Version](https://img.shields.io/pub/v/walrus)](https://pub.dev/packages/walrus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Dart](https://img.shields.io/badge/Dart-3.0+-00B4AB.svg)](https://dart.dev)
-[![Flutter](https://img.shields.io/badge/Flutter-Compatible-02569B.svg)](https://flutter.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B.svg)](https://flutter.dev)
 
-A Dart client SDK for [Walrus](https://walrus.xyz), the decentralized storage protocol built on [Sui](https://sui.io) blockchain.
+A Flutter SDK for [Walrus](https://walrus.xyz), the decentralized storage protocol built on [Sui](https://sui.io) blockchain.
 
-> **Note:** This is a community-maintained SDK. For official SDKs, see [Walrus Documentation](https://docs.walrus.site).
+> **Note:** This is a community-maintained SDK. For official SDKs, see [Walrus Documentation](https://docs.wal.app/).
 
 ## Features
 
-- [ ] **Store** - Upload blobs to the Walrus network
-- [ ] **Read** - Retrieve blobs by their ID
+- [x] **Store** - Upload blobs to the Walrus network
+- [x] **Read** - Retrieve blobs by their ID
 - [ ] **Encryption** - Client-side AES-GCM encryption support
 - [ ] **Streaming** - Handle large files with streaming upload/download
-- [ ] **Async/Await** - Modern Dart async patterns
-- [ ] **Flutter Ready** - Works seamlessly with Flutter mobile apps
+- [x] **Async/Await** - Modern Dart async patterns
+- [x] **Flutter Ready** - Works seamlessly with Flutter mobile apps
 
 ## Installation
 
@@ -30,130 +29,113 @@ dependencies:
 Then run:
 
 ```bash
-dart pub get
-# or for Flutter
 flutter pub get
 ```
 
 ## 🚀 Quick Start
 
-### Basic Usage
+### Initialization
+
+Initialize once in your app's `main.dart`:
 
 ```dart
+import 'package:flutter/material.dart';
 import 'package:walrus/walrus.dart';
 
-void main() async {
-  // Initialize the client
-  final walrus = WalrusClient();
-
-  // Upload data
-  final data = Uint8List.fromList(utf8.encode('Hello, Walrus!'));
-  final result = await walrus.store(data);
+Future<void> main() async {
+  await WalrusClient.initialize(
+    publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
+    aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+  );
   
-  print('Blob ID: ${result.blobId}');
-  print('URL: ${walrus.getBlobUrl(result.blobId)}');
-
-  // Download data
-  final retrieved = await walrus.read(result.blobId);
-  print('Content: ${utf8.decode(retrieved)}');
+  runApp(MyApp());
 }
 ```
 
-### Upload an Image
+### Basic Usage
+
+After initialization, use the singleton instance anywhere:
+
+```dart
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:walrus/walrus.dart';
+
+// Get singleton instance
+final walrus = WalrusClient.instance;
+
+// Upload data
+final data = Uint8List.fromList(utf8.encode('Hello, Walrus!'));
+final result = await walrus.store(data);
+
+print('Blob ID: ${result.blobId}');
+print('Object ID: ${result.objectId}');
+print('Is New: ${result.isNew}');
+print('URL: ${walrus.getBlobUrl(result.blobId)}');
+
+// Download data
+final retrieved = await walrus.read(result.blobId);
+print('Content: ${utf8.decode(retrieved)}');
+```
+
+### Upload with Options
 
 ```dart
 import 'dart:io';
 import 'package:walrus/walrus.dart';
 
-void main() async {
-  final walrus = WalrusClient();
+final walrus = WalrusClient.instance;
 
-  // Read image file
-  final imageBytes = await File('photo.jpg').readAsBytes();
-  
-  // Upload with 5 epochs storage duration
-  final result = await walrus.store(
-    imageBytes,
-    epochs: 5,
-  );
+// Read image file
+final imageBytes = await File('photo.jpg').readAsBytes();
 
-  print('Image URL: ${walrus.getBlobUrl(result.blobId)}');
-}
-```
-
-### Encrypted Storage
-
-```dart
-import 'package:walrus/walrus.dart';
-
-void main() async {
-  // Initialize with encryption
-  final walrus = WalrusClient(
-    encryption: AesGcmEncryption(),
-  );
-
-  final sensitiveData = Uint8List.fromList(utf8.encode('Secret message'));
-  
-  // Encrypt and upload
-  final result = await walrus.storeEncrypted(sensitiveData);
-  
-  print('Blob ID: ${result.blobId}');
-  
-  // Save these for later decryption!
-  print('Key: ${base64Encode(result.encryptionKey)}');
-  print('IV: ${base64Encode(result.iv)}');
-
-  // Decrypt and download
-  final decrypted = await walrus.readEncrypted(
-    result.blobId,
-    encryptionKey: result.encryptionKey,
-    iv: result.iv,
-  );
-  
-  print('Decrypted: ${utf8.decode(decrypted)}');
-}
-```
-
-### Custom Configuration
-
-```dart
-final walrus = WalrusClient(
-  // Use mainnet endpoints
-  publisherUrl: 'https://publisher.walrus.site',
-  aggregatorUrl: 'https://aggregator.walrus.site',
-  
-  // Or use testnet (default)
-  // publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
-  // aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+// Upload with options
+final result = await walrus.store(
+  imageBytes,
+  epochs: 5,           // Storage duration (5 epochs)
+  permanent: true,     // Cannot be deleted
+  // deletable: true,  // Can be deleted by owner
 );
+
+print('Image URL: ${walrus.getBlobUrl(result.blobId)}');
+```
+
+> **Important:** Up to (including) Walrus version 1.32, blobs are stored as permanent by default. Starting with version 1.33, newly stored blobs are deletable by default. If you care about blob persistence, make sure to use the appropriate flag.
+
+### Mainnet Configuration
+
+```dart
+Future<void> main() async {
+  await WalrusClient.initialize(
+    publisherUrl: 'https://your-mainnet-publisher.com', // Auth required
+    aggregatorUrl: 'https://aggregator.walrus-mainnet.walrus.space',
+  );
+  
+  runApp(MyApp());
+}
 ```
 
 ## 📖 API Reference
 
 ### WalrusClient
 
-#### Constructor
+#### Static Methods
 
-```dart
-WalrusClient({
-  String publisherUrl,      // Publisher node URL
-  String aggregatorUrl,     // Aggregator node URL  
-  WalrusEncryption? encryption,  // Optional encryption handler
-  Dio? dio,                 // Custom Dio instance
-})
-```
+| Method | Description |
+|--------|-------------|
+| `initialize({required String publisherUrl, required String aggregatorUrl, Dio? dio})` | Initialize singleton instance |
+| `instance` | Get singleton instance (throws if not initialized) |
+| `isInitialized` | Check if initialized |
+| `reset()` | Reset singleton (for testing) |
 
-#### Methods
+#### Instance Methods
 
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `store(Uint8List data, {int? epochs, bool deletable})` | Upload blob to network | `Future<StoreResponse>` |
-| `storeFile(String path, {int? epochs, bool deletable})` | Upload file by path | `Future<StoreResponse>` |
-| `storeEncrypted(Uint8List data, {int? epochs})` | Encrypt and upload | `Future<EncryptedStoreResponse>` |
+| `store(Uint8List data, {int? epochs, bool? deletable, bool? permanent})` | Upload blob to network | `Future<StoreResponse>` |
+| `storeFile(String path, {int? epochs, bool? deletable, bool? permanent})` | Upload file by path | `Future<StoreResponse>` |
 | `read(String blobId)` | Download blob by ID | `Future<Uint8List>` |
-| `readEncrypted(String blobId, {required key, required iv})` | Download and decrypt | `Future<Uint8List>` |
 | `getBlobUrl(String blobId)` | Get HTTP URL for blob | `String` |
-| `getMetadata(String blobId)` | Get blob metadata | `Future<BlobMetadata>` |
 | `exists(String blobId)` | Check if blob exists | `Future<bool>` |
 
 ### StoreResponse
@@ -163,18 +145,29 @@ class StoreResponse {
   final String blobId;      // Unique blob identifier
   final String? objectId;   // Sui Object ID
   final int? endEpoch;      // Storage expiration epoch
-  final bool isNew;         // True if newly created
+  final bool isNew;         // True if newly created, false if already existed
+  final String? mediaType;  // Media type of the blob
 }
 ```
 
-### EncryptedStoreResponse
+### Exceptions
 
 ```dart
-class EncryptedStoreResponse {
-  final String blobId;           // Blob ID on Walrus
-  final Uint8List encryptionKey; // AES key (keep secret!)
-  final Uint8List iv;            // Initialization vector
+// Base exception
+class WalrusException implements Exception {
+  final String message;
+  final int? statusCode;
+  final Object? cause;
 }
+
+// Blob not found
+class BlobNotFoundException extends WalrusException { }
+
+// Store operation failed
+class StoreException extends WalrusException { }
+
+// Network request failed
+class NetworkException extends WalrusException { }
 ```
 
 ## 🔧 Flutter Integration
@@ -183,15 +176,17 @@ class EncryptedStoreResponse {
 
 ```dart
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:walrus/walrus.dart';
 
 class WalrusImage extends StatelessWidget {
   final String blobId;
-  final WalrusClient walrus = WalrusClient();
 
-  WalrusImage({required this.blobId});
+  const WalrusImage({required this.blobId});
 
   @override
   Widget build(BuildContext context) {
+    final walrus = WalrusClient.instance;
+    
     return CachedNetworkImage(
       imageUrl: walrus.getBlobUrl(blobId),
       placeholder: (context, url) => CircularProgressIndicator(),
@@ -205,6 +200,7 @@ class WalrusImage extends StatelessWidget {
 
 ```dart
 import 'package:image_picker/image_picker.dart';
+import 'package:walrus/walrus.dart';
 
 Future<String?> uploadImage() async {
   final picker = ImagePicker();
@@ -213,43 +209,51 @@ Future<String?> uploadImage() async {
   if (image == null) return null;
   
   final bytes = await image.readAsBytes();
-  final walrus = WalrusClient();
-  final result = await walrus.store(bytes);
+  final walrus = WalrusClient.instance;
+  final result = await walrus.store(bytes, permanent: true);
   
   return result.blobId;
 }
 ```
 
 ## 🌐 Network Endpoints
-The following is a list of known public aggregators on Walrus Mainnet; they are checked periodically, but each of them may still be temporarily unavailable:
 
 | Network | Publisher | Aggregator |
 |---------|-----------|------------|
 | **Testnet** | `https://publisher.walrus-testnet.walrus.space` | `https://aggregator.walrus-testnet.walrus.space` |
-| **Mainnet** | (Auth required - No public publisher) | `https://walrus-mainnet-aggregator.nami.cloud` |
+| **Mainnet** | (Auth required - No public publisher) | `https://aggregator.walrus-mainnet.walrus.space` |
 
 > **Note:** On Mainnet, there are no public publishers without authentication, as they consume both SUI and WAL tokens. You need to run your own publisher node or use an authenticated service.
 
 ## 🛡️ Error Handling
 
 ```dart
+import 'package:walrus/walrus.dart';
+
 try {
+  final walrus = WalrusClient.instance;
   final result = await walrus.store(data);
+  print('Stored: ${result.blobId}');
+} on StateError catch (e) {
+  print('Not initialized: ${e.message}');
+} on BlobNotFoundException catch (e) {
+  print('Blob not found: ${e.message}');
+} on StoreException catch (e) {
+  print('Store failed: ${e.message}');
+} on NetworkException catch (e) {
+  print('Network error: ${e.message}');
 } on WalrusException catch (e) {
   print('Walrus error: ${e.message}');
-} on DioException catch (e) {
-  print('Network error: ${e.message}');
 }
 ```
 
 ## 🗺️ Roadmap
 
-- [ ] Basic store/read operations
+- [x] Basic store/read operations
+- [x] Deletable/Permanent blob support
 - [ ] AES-GCM encryption
 - [ ] Streaming upload/download for large files
 - [ ] Sui blockchain integration (Object management)
-- [ ] Walrus Sites support
-- [ ] Deletable blobs management
 - [ ] Multi-publisher support
 - [ ] Retry with exponential backoff
 
@@ -272,10 +276,10 @@ git clone https://github.com/keem-hyun/walrus_dart.git
 cd walrus
 
 # Get dependencies
-dart pub get
+flutter pub get
 
 # Run tests
-dart test
+flutter test
 
 # Check formatting
 dart format --set-exit-if-changed .
@@ -291,14 +295,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - [Walrus Official Site](https://walrus.xyz)
-- [Walrus Documentation](https://docs.walrus.site)
+- [Walrus Documentation](https://docs.wal.app/)
 - [Sui Blockchain](https://sui.io)
-- [Dart Packages](https://pub.dev)
+- [Pub.dev Package](https://pub.dev/packages/walrus)
 
 ## 💬 Support
 
 - 📫 Open an [issue](https://github.com/keem-hyun/walrus_dart/issues) for bug reports
 - 💡 Start a [discussion](https://github.com/keem-hyun/walrus_dart/discussions) for feature requests
 - ⭐ Star this repo if you find it useful!
----
 
+---
