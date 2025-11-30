@@ -23,7 +23,7 @@ Add `walrus` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  walrus: ^0.0.1
+  walrus: ^0.1.0
 ```
 
 Then run:
